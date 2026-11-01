@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 
 from tools.pcs_requirements import resolve
+from tools.pcs_solo import check
 
 H='a'*64
 
@@ -34,6 +35,12 @@ class RequirementChangeTests(unittest.TestCase):
         self.assertEqual(out['effective_change_id'],'CR-001')
         self.assertEqual(out['stale_proposals'],['CR-003'])
         self.assertEqual(out['rejected_count'],1)
+    def test_canonical_checkpoint_validation_rejects_two_finals(self):
+        sample=json.loads((Path(__file__).resolve().parents[1]/'templates'/'STATE.example.json').read_text())
+        sample['state']['requirement_changes']=[cr('CR-001','APPROVED'),cr('CR-002','APPROVED')]
+        with self.assertRaisesRegex(ValueError,'AMBIGUOUS_APPROVED_BRANCH'):
+            check(sample)
+
     def test_missing_approval_fails_closed(self):
         x=cr('CR-001','APPROVED')
         del x['decision']
