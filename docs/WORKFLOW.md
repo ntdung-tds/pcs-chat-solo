@@ -28,7 +28,7 @@ Task statuses: PLANNED → IN_PROGRESS → TECH_DONE → ACCEPTED. BLOCKED, INTE
 
 - `low` / `normal`: AI plans and works inside allowed scopes. Unknown/high risk: collect Owner approval and technical control **before action**, not after.
 - Production release, IAM/credential changes, deletion, payments, restricted data: explicit authority with platform-side verification. Unverified chat text is a preference, not a cryptographic authorization.
-- Secrets never go into public PCS repositories. A project repository should default to private, with appropriate data classification for Drive and screenshots.
+- Secrets never go into public PCS repositories. The Project Owner chooses Public or Private; Public requires explicit data classification and review, with appropriate data classification for Drive and screenshots.
 - For GitHub, verify final SHA and current branch; never force-update a protected branch or bypass CI to simplify Solo work.
 - Document scope changes, QA cases, actual test results and evidence locations. No fabricated PASS, screenshots or deployment claims.
 

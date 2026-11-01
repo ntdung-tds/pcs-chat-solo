@@ -5,7 +5,7 @@ Read **only when** working with GitHub project state, creating a project reposit
 ## Role of GitHub
 
 - The public `pcs-chat-solo` repository provides PCS instructions and optional local validation tools. **Never save a user's project or secrets here.**
-- Each project uses its own repository, **private by default**, subject to its classification and Owner permissions.
+- Each project uses its own repository, **Public or Private as selected by the Owner**, subject to its classification and Owner permissions.
 - One authoritative `pcs/STATE.json` (`schema: pcs.solo.v1`), a short derived `pcs/MOMENT.md`, optional immutable `pcs/moments/MOM-...json`. GitHub Issues/PRs are evidence and coordination, not a second source of truth.
 - The connected AI must inspect its **real** permissions before acting. The local Python helper writes only local files; GitHub persistence requires an authenticated connector or authorized environment.
 

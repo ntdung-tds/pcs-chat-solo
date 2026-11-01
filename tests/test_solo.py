@@ -18,6 +18,42 @@ def sample():
 
 
 class SoloTests(unittest.TestCase):
+    def test_public_repo_requires_explicit_public_data_review(self):
+        s = sample()
+        s['state']['policy']['repository_visibility'] = 'PUBLIC'
+        with self.assertRaises(AssertionError):
+            mod.check(s)
+        s['state']['policy']['content_classification'] = 'PUBLIC'
+        s['state']['policy']['public_content_reviewed'] = True
+        s['state']['tasks'] = [{'id':'T1','status':'PLANNED'}]
+        with self.assertRaises(AssertionError):
+            mod.check(s)
+        s['state']['tasks'][0]['classification'] = 'PUBLIC'
+        self.assertTrue(mod.check(s))
+        s['state']['current']['next_action'] = 'ghp_' + 'A'*40
+        with self.assertRaises(AssertionError):
+            mod.check(s)
+
+    def test_inspect_and_diff_are_bounded_without_free_text(self):
+        s = sample()
+        s['state']['tasks'] = [
+            {'id':'T'+str(i),'status':'PLANNED','title':'Sensitive title '+str(i)}
+            for i in range(150)
+        ]
+        s['state']['current']['active_task'] = 'T149'
+        out = mod.inspect(s, 'tasks', 8)
+        self.assertEqual(out['shown'][0]['id'], 'T149')
+        self.assertEqual(out['remaining'], 142)
+        self.assertNotIn('Sensitive title', json.dumps(out))
+        newer = copy.deepcopy(s)
+        newer['revision'] = 2
+        newer['state']['tasks'][0]['status'] = 'IN_PROGRESS'
+        d = mod.diff(s, newer)
+        self.assertEqual(d['groups']['tasks']['total'], 1)
+        self.assertNotIn('Sensitive title', json.dumps(d))
+        with self.assertRaises(AssertionError):
+            mod.diff(s, s)
+
     def test_example_valid(self):
         self.assertTrue(mod.check(sample()))
     def test_no_multi_agent_registry(self):

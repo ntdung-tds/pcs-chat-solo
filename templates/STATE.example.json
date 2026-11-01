@@ -9,8 +9,14 @@
     "name": "Example project",
     "phase": "DISCOVERY",
     "source_refs": [],
-    "product_map": {"status": "DRAFT", "summary": "Not yet verified"},
-    "architecture_map": {"status": "DRAFT", "summary": "Not yet verified"},
+    "product_map": {
+      "status": "DRAFT",
+      "summary": "Not yet verified"
+    },
+    "architecture_map": {
+      "status": "DRAFT",
+      "summary": "Not yet verified"
+    },
     "tasks": [],
     "features": [],
     "flows": [],
@@ -18,7 +24,20 @@
     "decisions": [],
     "risks": [],
     "artifacts": [],
-    "current": {"active_task": null, "last_completed_step": "Project registered", "next_action": "Analyze the requirements", "blockers": []},
-    "policy": {"production": "EXPLICIT_VERIFIED_OWNER_APPROVAL", "destructive": "EXPLICIT_VERIFIED_OWNER_APPROVAL", "source_of_truth": "PROJECT_GITHUB_WHEN_CONNECTED", "secrets": "NEVER_COMMIT"}
+    "current": {
+      "active_task": null,
+      "last_completed_step": "Project registered",
+      "next_action": "Analyze the requirements",
+      "blockers": []
+    },
+    "policy": {
+      "production": "EXPLICIT_VERIFIED_OWNER_APPROVAL",
+      "destructive": "EXPLICIT_VERIFIED_OWNER_APPROVAL",
+      "source_of_truth": "PROJECT_GITHUB_WHEN_CONNECTED",
+      "secrets": "NEVER_COMMIT",
+      "repository_visibility": "USER_CHOICE",
+      "content_classification": "UNCLASSIFIED",
+      "public_content_reviewed": false
+    }
   }
 }
