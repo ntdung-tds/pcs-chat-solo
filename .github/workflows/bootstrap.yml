@@ -2,7 +2,7 @@ name: Bootstrap PCS Chat Solo source
 on:
   push:
     branches: [main]
-    paths: ['bootstrap/part-03.b64']
+    paths: ['.github/workflows/bootstrap.yml']
 permissions:
   contents: write
 jobs:
@@ -38,8 +38,12 @@ jobs:
                       target.parent.mkdir(parents=True,exist_ok=True)
                       target.write_bytes(data)
           for part in parts: part.unlink()
-          Path('.github/workflows/bootstrap.yml').unlink()
           Path('bootstrap').rmdir()
+          # Keep bootstrap unchanged: GitHub Actions cannot rewrite workflow files.
+          path=Path('.github/workflows/bootstrap.yml')
+          extra=hashlib.sha256(path.read_bytes()).hexdigest()
+          with Path('MANIFEST.sha256').open('a',encoding='utf-8') as manifest:
+              manifest.write(extra+'  .github/workflows/bootstrap.yml\n')
           PY
       - name: Verify complete Chat Solo source
         run: |
