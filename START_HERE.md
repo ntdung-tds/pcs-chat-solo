@@ -10,7 +10,8 @@
 
 ## Load further **only when needed**
 - `docs/WORKFLOW.md` — when planning a new/complex project, questions about workflow or acceptance.
-- `docs/GITHUB_CONTINUITY.md` — before the first GitHub state write, when adopting a GitHub project or resolving persistence/branch conflicts; verify project repository identity and commit evidence.
+- `docs/GITHUB_CONTINUITY.md` — when writing GitHub project state; repository visibility is **Owner-selected Public or Private**. For Public, verify all data/history is safe to publish and record explicit classification.
+- `docs/STATE_OPERATIONS.md` — only for large backlogs, state inspection/diff, troubleshooting or sensitive-data handling.
 - `templates/STATE.example.json` — only when creating state or checking its structure.
 - `tools/pcs_solo.py` — only when using/debugging the optional local Python helper.
 - `tests/`, `VERIFY_SEED.py`, `MANIFEST.sha256`, CI files — only when maintaining/testing PCS itself.
