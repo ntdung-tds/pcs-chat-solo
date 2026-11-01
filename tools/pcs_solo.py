@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Optional offline state helper. Never claims to synchronize to GitHub."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import sys
+import tempfile
+from datetime import datetime, timezone
+
+STATUSES = {'PLANNED', 'IN_PROGRESS', 'BLOCKED', 'TECH_DONE',
+            'INTEGRATION_PENDING', 'ACCEPTED', 'CANCELLED'}
+TYPES = ['tasks', 'features', 'flows', 'releases']
+ID = re.compile(r'^[A-Za-z][A-Za-z0-9._-]{0,79}$')
+SLUG = re.compile(r'^[a-z0-9][a-z0-9-]{1,62}$')
+FORBIDDEN = {'collaboration', 'agent_registry', 'lead', 'contributors', 'assignments', 'agent_proposals'}
+
+
+def clock():
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
+def stable(obj):
+    return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
+
+
+def digest(obj):
+    return hashlib.sha256(stable(obj).encode('utf-8')).hexdigest()
+
+
+def check(obj):
+    assert isinstance(obj, dict) and obj.get('schema') == 'pcs.solo.v1', 'Invalid wrapper schema'
+    assert type(obj.get('revision')) is int and obj['revision'] > 0, 'Invalid revision'
+    s = obj.get('state')
+    assert isinstance(s, dict) and s.get('schema') == 'pcs.solo.project.v1', 'Invalid project schema'
+    assert isinstance(s.get('slug'), str) and SLUG.fullmatch(s['slug']) and not s['slug'].endswith('-'), 'Invalid slug'
+    assert isinstance(s.get('name'), str) and s['name'].strip(), 'Missing project name'
+    assert not (FORBIDDEN & set(s)), 'Multi-agent fields forbidden in Solo state'
+    for key in TYPES + ['source_refs', 'decisions', 'risks', 'artifacts']:
+        assert isinstance(s.get(key), list), f'Invalid {key} list'
+    assert isinstance(s.get('product_map'), dict) and isinstance(s.get('architecture_map'), dict), 'Missing maps'
+    assert isinstance(s.get('policy'), dict), 'Missing policy'
+    current = s.get('current')
+    assert isinstance(current, dict) and isinstance(current.get('next_action'), str) and current['next_action'].strip(), 'Missing next_action'
+    seen, tasks = set(), {}
+    for collection in TYPES:
+        for t in s[collection]:
+            assert isinstance(t, dict) and isinstance(t.get('id'), str) and ID.fullmatch(t['id']), 'Invalid item id'
+            assert t['id'] not in seen, 'Duplicate item id'
+            seen.add(t['id'])
+            assert t.get('status') in STATUSES, 'Invalid status'
+            if collection == 'tasks':
+                tasks[t['id']] = t
+            if t['status'] == 'ACCEPTED':
+                assert t.get('evidence') and any(e.get('verified') is True and e.get('ref') for e in t['evidence']), 'ACCEPTED needs verified evidence'
+                assert t.get('acceptance', {}).get('decision') == 'APPROVED', 'ACCEPTED needs approval'
+                if collection == 'tasks' and t.get('qa', {}).get('required', True):
+                    assert t.get('qa', {}).get('status') == 'PASS', 'Task QA not passed'
+                if collection == 'features':
+                    assert t.get('integration', {}).get('status') == 'PASS', 'Feature integration not passed'
+                if collection == 'flows':
+                    assert t.get('e2e', {}).get('status') == 'PASS', 'Flow E2E not passed'
+                if collection == 'releases':
+                    assert t.get('security', {}).get('status') == 'PASS' and t.get('rollback', {}).get('status') == 'PASS', 'Release security/rollback not passed'
+    for t in tasks.values():
+        deps = t.get('dependencies', [])
+        assert isinstance(deps, list) and len(deps) == len(set(deps)), 'Invalid dependencies'
+        assert all(d in tasks and d != t['id'] for d in deps), 'Missing/self dependency'
+    visited, visiting = set(), set()
+    def walk(id_):
+        assert id_ not in visiting, 'Dependency cycle'
+        if id_ in visited:
+            return
+        visiting.add(id_)
+        for dep in tasks[id_].get('dependencies', []):
+            walk(dep)
+        visiting.remove(id_)
+        visited.add(id_)
+    for id_ in tasks:
+        walk(id_)
+    assert len(stable(obj).encode('utf-8')) < 750000, 'State too large'
+    return True
+
+
+def moment(obj):
+    check(obj)
+    s = obj['state']
+    rows = [f'# PCS Chat Solo Moment — {s["name"]}', '',
+        f'- Revision: {obj["revision"]}', f'- Updated: {obj["updated_at"]}',
+        '- Source: `pcs/STATE.json`', f'- Phase: {s.get("phase", "DISCOVERY")}',
+        f'- Next action: {s["current"]["next_action"]}',
+        f'- Blockers: {"; ".join(s["current"].get("blockers", [])) or "None"}', '',
+        '## Tasks']
+    rows += [f'- {t["id"]}: {t.get("title", t["id"])} ({t["status"]})' for t in s['tasks']] or ['- None']
+    rows += ['', '## Acceptance', '- Evidence and Owner approval must be verified outside the state file.',
+             '- This document is derived, not a second source of truth.', '']
+    return '\n'.join(rows)
+
+
+def atomic(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=path.parent, prefix='.pcs-solo-', delete=False) as out:
+        out.write(payload)
+        tmp = Path(out.name)
+    os.replace(tmp, path)
+
+
+def init(root, slug, name):
+    template = Path(__file__).resolve().parent.parent / 'templates' / 'STATE.example.json'
+    obj = json.loads(template.read_text(encoding='utf-8'))
+    obj['state']['slug'], obj['state']['name'] = slug, name
+    obj['updated_at'] = clock()
+    check(obj)
+    folder = root / 'pcs'
+    assert not (folder / 'STATE.json').exists(), 'State already exists; refusing overwrite'
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / 'STATE.json'
+    with path.open('x', encoding='utf-8') as f:
+        f.write(json.dumps(obj, ensure_ascii=False, indent=2) + '\n')
+    atomic(folder / 'MOMENT.md', moment(obj))
+    return obj
+
+
+def checkpoint(root, new_obj, expected):
+    folder = root / 'pcs'
+    before = json.loads((folder / 'STATE.json').read_text(encoding='utf-8'))
+    check(before)
+    assert before['revision'] == expected, 'CONFLICT: reload current revision'
+    check(new_obj)
+    assert new_obj['revision'] == expected + 1, 'Revision must advance exactly one'
+    assert new_obj['state']['slug'] == before['state']['slug'], 'Cannot change project identity'
+    event = {'schema': 'pcs.solo.moment.v1', 'revision': new_obj['revision'],
+             'previous_sha256': digest(before), 'state_sha256': digest(new_obj), 'at': clock()}
+    event_name = f'MOM-{new_obj["revision"]:06d}-{digest(new_obj)[:12]}.json'
+    events_dir = folder / 'moments'
+    events_dir.mkdir(parents=True, exist_ok=True)
+    event_path = events_dir / event_name
+    with event_path.open('x', encoding='utf-8') as f:
+        f.write(json.dumps(event, indent=2) + '\n')
+    # Local only. A remote GitHub commit must contain STATE + Moment together.
+    atomic(folder / 'STATE.json', json.dumps(new_obj, ensure_ascii=False, indent=2) + '\n')
+    atomic(folder / 'MOMENT.md', moment(new_obj))
+    return event_name
+
+
+def cli():
+    p = argparse.ArgumentParser()
+    sub = p.add_subparsers(dest='command', required=True)
+    init_cmd = sub.add_parser('init')
+    init_cmd.add_argument('--root', type=Path, required=True)
+    init_cmd.add_argument('--slug', required=True)
+    init_cmd.add_argument('--name', required=True)
+    verify_cmd = sub.add_parser('verify')
+    verify_cmd.add_argument('--root', type=Path, required=True)
+    checkpoint_cmd = sub.add_parser('checkpoint')
+    checkpoint_cmd.add_argument('--root', type=Path, required=True)
+    checkpoint_cmd.add_argument('--input', type=Path, required=True)
+    checkpoint_cmd.add_argument('--expect', type=int, required=True)
+    args = p.parse_args()
+    if args.command == 'init':
+        obj = init(args.root, args.slug, args.name)
+        print('initialized revision', obj['revision'])
+    elif args.command == 'verify':
+        obj = json.loads((args.root / 'pcs' / 'STATE.json').read_text(encoding='utf-8'))
+        check(obj)
+        print('verified revision', obj['revision'])
+    else:
+        obj = json.loads(args.input.read_text(encoding='utf-8'))
+        print('checkpoint', checkpoint(args.root, obj, args.expect))
+
+
+if __name__ == '__main__':
+    try:
+        cli()
+    except Exception as exc:
+        print('PCS_CHAT_SOLO_ERROR:', exc, file=sys.stderr)
+        sys.exit(1)
