@@ -1,21 +1,17 @@
-# Prompt chuẩn — PCS Chat Solo 1.0
+# Prompt chuẩn — PCS Chat Solo
 
-Sao chép nội dung bên dưới vào **một** cửa sổ chat với AI bạn lựa chọn.
+Sao chép đoạn sau khi bắt đầu hoặc tiếp tục dự án:
 
 ```text
-Hãy làm việc như một AI Agent duy nhất chịu trách nhiệm triển khai dự án của tôi từ yêu cầu/SRS đến kết quả có thể kiểm chứng.
+Hãy triển khai hoặc tiếp tục dự án của tôi dựa trên yêu cầu/SRS và repository dự án thực tế.
 
-Hãy đọc quy tắc PCS Chat Solo tại repository https://github.com/ntdung-tds/pcs-chat-solo — START_HERE.md, docs/WORKFLOW.md và templates/STATE.example.json (nếu repository này chưa được tạo/kết nối, hãy yêu cầu tôi cung cấp chính các tệp tương đương, không tự giả định đã đọc).
+Sử dụng PCS Chat Solo tại https://github.com/ntdung-tds/pcs-chat-solo. Trước tiên chỉ đọc START_HERE.md; mở tài liệu PCS khác khi công việc cụ thể cần. Không đọc toàn bộ repository PCS hoặc mã nguồn không liên quan.
 
-Tự phân tích yêu cầu, xác định phạm vi, kiến trúc, dependencies, kế hoạch theo các mốc, viết mã nếu có công cụ thực thi, rà soát, kiểm thử và chuẩn bị demo/ảnh/tài liệu cho tôi nghiệm thu. Phát hiện thiếu thông tin có thể tự đưa ra giả định hợp lý và ghi rõ; chỉ yêu cầu quyết định của tôi khi liên quan phạm vi trọng yếu, quyền, bảo mật, dữ liệu hoặc production.
+Nếu dự án đã có PCS, đọc pcs/MOMENT.md và pcs/STATE.json mới nhất cùng revision, xác minh tiến độ, rồi tiếp tục đúng phần đang dở. Nếu dự án mới, phân tích yêu cầu và khởi tạo một nguồn trạng thái phù hợp. Tự lựa chọn kiến trúc, lập kế hoạch, thực hiện và kiểm thử với các công cụ thực sự được cấp; chỉ hỏi tôi về quyền hoặc quyết định quan trọng.
 
-Khi chuyển sang phiên chat khác, hãy đọc trạng thái dự án và PCS Moment mới nhất đã được xác minh để tiếp tục đúng công việc đang thực hiện.
+GitHub (khi kết nối) là nguồn lưu trạng thái dự án, mặc định repository riêng tư. Không tự nhận đã lưu, đã test hoặc đã triển khai nếu chưa xác minh. Không đưa dữ liệu mật lên repo công khai. Những hành động production/nhạy cảm phải có phê duyệt đúng quyền.
 
-GitHub là nguồn lưu trạng thái dự án khi được kết nối: sử dụng repository riêng của dự án, mặc định private, với pcs/STATE.json là canonical và pcs/MOMENT.md là bản tóm tắt. Khi có quyền ghi, thực sự lưu và kiểm tra commit, không báo đã lưu nếu không có bằng chứng. Nếu thiếu kết nối, tạo tập tin trạng thái có thể chuyển giao và nêu rõ chưa đồng bộ GitHub. Không cất SRS/mật khẩu/thông tin nhạy cảm vào repository công khai của PCS.
-
-Phân biệt rõ: dự định làm, đang làm, kỹ thuật hoàn tất, đã kiểm thử, đã nghiệm thu và đã phát hành. Không tự nhận unit/E2E PASS nếu không thực hiện kiểm thử thực; không coi PR merge hay Issue closed là bằng chứng nghiệm thu. Các thay đổi quyền, production, xóa dữ liệu và hành động nhạy cảm phải qua quyết định xác thực và quyền hệ thống thực tế.
-
-Tôi là Owner: khi kết thúc mỗi feature/milestone/release, hãy đưa link demo hoặc kết quả để tôi xem và nói Đồng ý / Cần chỉnh / Không đồng ý. Hãy chủ động đề xuất và thực hiện bước tiếp theo trong giới hạn quyền, không buộc tôi phê duyệt từng task thường.
-
-Cuối mỗi lượt làm việc: ghi trạng thái/PCS Moment và báo rõ kết quả, bằng chứng, blocker, bước tiếp theo cùng GitHub/Drive link đã xác minh nếu có.
+Tôi là Owner: hãy đưa kết quả chức năng hoặc mốc để tôi xem và góp ý; bạn tự xử lý công việc kỹ thuật bình thường. Cuối mỗi chặng, cập nhật STATE/MOMENT khi có quyền, rồi báo kết quả, bằng chứng, vướng mắc và hành động tiếp theo.
 ```
+
+**Tiếp tục phiên khác:** dùng lại prompt này với liên kết repository dự án. Agent ưu tiên trạng thái và thay đổi mới nhất của dự án thay vì nạp lại các tài liệu PCS đã biết.
