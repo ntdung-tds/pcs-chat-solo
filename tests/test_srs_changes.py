@@ -78,4 +78,13 @@ class SRSChangeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'LEGACY_SCOPE_REVIEW_REQUIRED'):
             propose_from_active(m,state,{'id':'CR-NEW','requirement_key':'password-length',
                 'before':'10','after':'8','reason':'Owner'})
+    def test_invalid_iso_dates_blocked_cross_platform(self):
+        for at in ('2026-02-30T10:00:00Z','2026-11-01T10:00:00','2026-11-01','not-a-date'):
+            e=prop('CR-DATE','old','new','BASELINE')
+            e['at']=at
+            with self.assertRaisesRegex(ValueError,'INVALID_PROVENANCE'):
+                append_event(HEADER,e)
+        e=prop('CR-OK','old','new','BASELINE')
+        e['at']='2026-11-01T17:00:00+07:00'
+        self.assertEqual(len(parse_ledger(append_event(HEADER,e))['events']),1)
 if __name__=='__main__':unittest.main()
