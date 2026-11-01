@@ -14,6 +14,10 @@ A lightweight, prompt-first continuity workflow for **one AI working in a chat w
 6. **Verify:** run actual unit, integration, negative-path, E2E, accessibility and security checks to the extent supported; distinguish unrun tests.
 7. **Handoff:** publish STATE + Moment + evidence, summarize done/blockers/next actions, ask Owner to review visible outcomes when meaningful.
 
+## Connected GitHub operations
+
+For project initialization, revision-safe checkpointing, protected branches and actual connector permissions, consult [GitHub continuity](GITHUB_CONTINUITY.md) **when that operation is needed**. GitHub persistence is an action the connected AI must actually perform and re-read; the optional Python helper never uploads to GitHub. The compact Moment shows a bounded active-task summary; the canonical STATE contains the complete backlog.
+
 ## State contract
 
 Project-private canonical: `pcs/STATE.json`, wrapper schema `pcs.solo.v1`. Minimal fields: `revision`, `updated_at`, `state.slug/name/version`, `tasks`, `features`, `flows`, `releases`, `current`, `decisions`, `risks`, `artifacts`, `policy`. No agent registry nor separate task assignment store. `pcs/MOMENT.md` and immutable records under `pcs/moments/` are derived from STATE and not authoritative independently.
