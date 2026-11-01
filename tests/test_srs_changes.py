@@ -12,7 +12,7 @@ def decide(id_,decision='APPROVED'):
 class SRSChangeTests(unittest.TestCase):
     def test_active_context_needs_no_section_from_owner(self):
         self.assertEqual(active_context(state)['item_key'],'FEAT-2')
-        e,m=propose_from_active(HEADER,state,{'id':'CR-1','before':'12','after':'8','reason':'Owner change'})
+        e,m=propose_from_active(HEADER,state,{'id':'CR-1','before':'12','after':'8','reason':'Owner change','requirement_key':'password-length'})
         self.assertEqual(e['srs_ref'],'docs/SRS.md#security')
         self.assertEqual(len(parse_ledger(m)['events']),1)
     def test_ambiguous_context_falls_back_to_task(self):
@@ -39,4 +39,37 @@ class SRSChangeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'DECISION_PROVENANCE'):
             append_event(m,{'kind':'DECIDE','id':'CR-1','decision':'APPROVED','actor':'owner','ref':'','at':'2026-11-01T10:00:00Z'})
         self.assertFalse(summary(append_event(m,decide('CR-1')))['items'][0]['verified_external_decision'])
+    def test_independent_requirements_same_feature_do_not_overwrite(self):
+        m=HEADER
+        e,m=propose_from_active(m,state,{'id':'CR-P1','requirement_key':'password-length',
+            'before':'min 12','after':'min 8','reason':'Owner'})
+        m=append_event(m,decide('CR-P1'))
+        independent,m=propose_from_active(m,state,{'id':'CR-U1','requirement_key':'username-length',
+            'before':'max 24','after':'max 40','reason':'Owner'})
+        self.assertEqual(independent['based_on'],'BASELINE')
+        self.assertNotEqual(independent['item_key'],e['item_key'])
+        nxt,next_m=propose_from_active(m,state,{'id':'CR-P2','requirement_key':'password-length',
+            'before':'min 8','after':'min 10','reason':'Owner'})
+        self.assertEqual(nxt['based_on'],'CR-P1')
+        self.assertEqual(summary(next_m,task_id='TASK-5')['total_items'],2)
+        self.assertEqual(summary(next_m,feature_id='FEAT-2')['total_items'],2)
+        with self.assertRaisesRegex(ValueError,'DELTA_BASELINE_MISMATCH'):
+            propose_from_active(m,state,{'id':'CR-P3','requirement_key':'password-length',
+                'before':'unrelated','after':'other','reason':'Owner'})
+        with self.assertRaisesRegex(ValueError,'REQUIREMENT_KEY_REQUIRED'):
+            propose_from_active(m,state,{'id':'CR-BAD','before':'x','after':'y','reason':'Owner'})
+    def test_bounded_multi_requirement_summary(self):
+        m=HEADER
+        for i in range(14):
+            e=prop('CR-Q'+str(i),'before','after','BASELINE')
+            e['item_key']='FEAT-2.aspect'+str(i)
+            e['requirement_key']='aspect'+str(i)
+            m=append_event(m,e)
+        out=summary(m,task_id='TASK-5')
+        self.assertEqual(out['total_items'],14)
+        self.assertEqual(out['remaining_items'],6)
+        self.assertEqual(len(out['items']),8)
+        self.assertEqual(len(summary(m,max_items=20)['items']),14)
+        with self.assertRaisesRegex(ValueError,'INVALID_MAX_ITEMS'):
+            summary(m,max_items=100)
 if __name__=='__main__':unittest.main()
