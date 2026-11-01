@@ -84,6 +84,9 @@ def propose_from_active(markdown,doc,change,tasks=None,features=None):
     item_key=context['item_key']+'.'+requirement_key
     guard(identifier(item_key),'REQUIREMENT_SCOPE_TOO_LONG')
     ledger=parse_ledger(markdown)
+    # A legacy unscoped Feature/Task chain must be reconciled, not silently forked.
+    guard(not any(p['item_key']==context['item_key'] and 'requirement_key' not in p
+        for p in ledger['proposals'].values()),'LEGACY_SCOPE_REVIEW_REQUIRED')
     prior=ledger['proposals'].get(ledger['tips'].get(item_key))
     if prior:guard(change.get('before')==prior['after'],'DELTA_BASELINE_MISMATCH')
     event={'kind':'PROPOSE','id':change['id'],**context,'item_key':item_key,
