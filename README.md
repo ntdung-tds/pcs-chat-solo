@@ -1,6 +1,6 @@
 # PCS Chat Solo — One AI in a chat window
 
-**Edition:** PCS Chat Solo 1.0.0. **Exactly one AI agent actively working on a project at a time.** Designed for ChatGPT, Claude, Gemini or another chat AI that can read these instructions. No installer and no dedicated runtime service is required for normal use.
+**Edition:** PCS Chat Solo 1.0.0. Designed for managing and continuing projects directly in ChatGPT, Claude, Gemini or another supported AI chat. No installer or dedicated runtime service is required.
 
 ## Start
 
@@ -8,7 +8,7 @@
 2. Describe your idea or attach SRS/SOW; provide access to the project's GitHub repository when available.
 3. The AI analyzes, plans, implements within its real available permissions, verifies, and checkpoints project state. A new chat resumes from the same project state.
 
-**No second contributor, Lead registry, join requests, self-claim command, multi-agent concurrency coordinator, task-agent approvals, or GitHub Admin automation.** The human Project Owner reviews features, business flows and release results, rather than every small task.
+The Project Owner reviews completed features, business flows and releases, while the AI manages planning, implementation, verification and project continuity.
 
 ## Separation and project storage
 
@@ -41,5 +41,3 @@ The optional helper writes local files; it **does not** claim to upload them to 
 - **PCS Desktop 2.1:** local coding-agent installer and legacy `pcs/current.json` format, not this repo.
 - **PCS Multi-Agent 3.2:** `ntdung-tds/pcs-universal`, independent multi-agent edition.
 - **PCS Chat Solo:** no agent registry, no required CLI, minimal source and tests.
-
-A standalone repository can be initialized by pushing these exact seed files into an empty GitHub repository named `pcs-chat-solo`. This seed does not claim that GitHub has already created the repository.
