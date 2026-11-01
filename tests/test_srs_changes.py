@@ -72,4 +72,10 @@ class SRSChangeTests(unittest.TestCase):
         self.assertEqual(len(summary(m,max_items=20)['items']),14)
         with self.assertRaisesRegex(ValueError,'INVALID_MAX_ITEMS'):
             summary(m,max_items=100)
+    def test_legacy_unscoped_history_must_be_reconciled(self):
+        m=append_event(HEADER,prop('CR-LEGACY','12','10','BASELINE'))
+        self.assertEqual(summary(m,item_key='FEAT-2')['total_items'],1)
+        with self.assertRaisesRegex(ValueError,'LEGACY_SCOPE_REVIEW_REQUIRED'):
+            propose_from_active(m,state,{'id':'CR-NEW','requirement_key':'password-length',
+                'before':'10','after':'8','reason':'Owner'})
 if __name__=='__main__':unittest.main()
