@@ -13,6 +13,7 @@
 4. Checkpoint the single canonical `pcs/STATE.json`, derive `pcs/MOMENT.md`, verify persisted commit where connected, and report done/evidence/blockers/next action. If a remote write conflicts, reload and reconcile.
 
 ## Load further **only when needed**
+- `docs/REQUIREMENT_CHANGE_CONTROL.md` — preserve baseline and multiple CR proposals; resolve the final approved requirement before continuing changed items.
 - `docs/CONTEXT_ENGINE.md` — on-demand context selection and cross-chat handoff; optional `tools/pcs_context.py`.
 - `docs/WORKFLOW.md` — when planning a new/complex project, questions about workflow or acceptance.
 - `docs/GITHUB_CONTINUITY.md` — when writing GitHub project state; repository visibility is **Owner-selected Public or Private**. For Public, verify all data/history is safe to publish and record explicit classification.
