@@ -15,3 +15,11 @@ Tôi là Owner: hãy đưa kết quả chức năng hoặc mốc để tôi xem 
 ```
 
 **Tiếp tục phiên khác:** dùng lại prompt này với liên kết repository dự án. Agent ưu tiên trạng thái và thay đổi mới nhất của dự án thay vì nạp lại các tài liệu PCS đã biết.
+
+## Lệnh tiếp tục chuẩn (khi đã biết dự án)
+
+```text
+Tiếp tục dự án theo PCS, sử dụng trạng thái mới nhất trên GitHub.
+```
+
+AI dùng repository dự án đã xác định, ưu tiên `pcs/MOMENT.md` và đối chiếu revision/HEAD với `pcs/STATE.json`. Chỉ truy xuất nhiệm vụ, code, thay đổi và test có liên quan; sau đó tiếp tục và checkpoint theo quyền thực tế. Nếu chưa biết repository, hỏi đúng liên kết dự án; không suy đoán. Nếu GitHub không truy cập được, thông báo trạng thái chưa được đồng bộ.
