@@ -1,10 +1,8 @@
-name: Bootstrap PCS edition source
+name: Bootstrap PCS Chat Solo source
 on:
   push:
     branches: [main]
-    paths:
-      - 'bootstrap/edition-seed.zip'
-  workflow_dispatch:
+    paths: ['bootstrap/edition-seed.tar.gz']
 permissions:
   contents: write
 jobs:
@@ -12,64 +10,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-        with:
-          persist-credentials: true
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
-      - name: Extract authenticated edition seed
+      - name: Verify checksum and safely unpack complete standalone Chat Solo seed
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path, PurePosixPath
-          import hashlib, stat, zipfile
-          src=Path('bootstrap/edition-seed.zip')
-          if not src.exists():
-              print('Seed already imported; no bootstrap work needed')
-              raise SystemExit(0)
-          expected='ca0dcb7dba986b397640b0c948b0ae6469da2e7bf1af694cf6e7fbd924d13d88'
+          import hashlib, io, tarfile
+          src=Path('bootstrap/edition-seed.tar.gz')
           raw=src.read_bytes()
-          assert hashlib.sha256(raw).hexdigest()==expected, 'Seed SHA-256 mismatch'
-          with zipfile.ZipFile(src) as z:
-              entries=z.infolist()
-              assert len(entries)==11, 'Unexpected seed entry count'
-              assert sum(i.file_size for i in entries)<100_000, 'Seed exceeds size limit'
-              for i in entries:
-                  p=PurePosixPath(i.filename)
-                  assert not p.is_absolute() and len(p.parts)>0 and all(x not in ('','.', '..') for x in p.parts), 'Invalid path'
-                  assert stat.S_IFMT(i.external_attr >> 16)!=stat.S_IFLNK, 'Symlink rejected'
-                  assert i.file_size<40_000 and not i.is_dir(), 'Unexpected seed entry'
-                  target=Path(i.filename)
-                  content=z.read(i.filename)
+          assert hashlib.sha256(raw).hexdigest()=='bef2fd0c3ccc374c04b609cf91b3a4aeacef90beab02535cfc3ece93e210fa10','Edition seed SHA256 mismatch'
+          with tarfile.open(fileobj=io.BytesIO(raw), mode='r:gz') as archive:
+              members=archive.getmembers()
+              assert len(members)==11,'Unexpected source file count'
+              assert sum(v.size for v in members)<100_000,'Source size too large'
+              for member in members:
+                  p=PurePosixPath(member.name)
+                  assert member.isfile() and not p.is_absolute() and all(x not in ('','.','..') for x in p.parts),'Unsafe member'
+                  assert member.size<40_000,'Oversized member'
+                  data=archive.extractfile(member).read()
+                  target=Path(*p.parts)
                   if target.exists():
-                      assert target.read_bytes()==content, f'Conflicting existing file {target}'
+                      assert target.read_bytes()==data, 'Existing content differs: '+str(target)
                   else:
                       target.parent.mkdir(parents=True,exist_ok=True)
-                      target.write_bytes(content)
+                      target.write_bytes(data)
           src.unlink()
           Path('.github/workflows/bootstrap.yml').unlink()
           Path('bootstrap').rmdir()
           PY
-      - name: Verify imported edition source
+      - name: Verify complete Chat Solo source
         run: |
           python VERIFY_SEED.py
           python -m unittest discover -s tests -v
-      - name: Import full original PCS 2.1 distribution if Desktop
-        if: ${{ github.repository == 'ntdung-tds/pcs-desktop' }}
-        run: |
-          python scripts/import_legacy.py
-          (cd distribution/pcs21 && python VERIFY_PACKAGE.py)
-          (cd distribution/pcs21 && node --test runtime/tools/pcs21.test.mjs)
-      - name: Commit verified complete edition
+      - name: Publish complete Chat Solo edition
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m 'feat: publish verified standalone PCS edition source'
-            git push origin HEAD:main
-          fi
+          git commit -m 'feat: publish all verified PCS Chat Solo source files'
+          git push origin HEAD:main
