@@ -3,6 +3,8 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +52,39 @@ class SoloTests(unittest.TestCase):
             self.assertIn('Write architecture', (root / 'pcs' / 'MOMENT.md').read_text())
             with self.assertRaises(AssertionError):
                 mod.checkpoint(root, new, expected=1)
+    def test_moment_is_bounded_and_shows_current_task(self):
+        s = sample()
+        s['state']['tasks'] = [
+            {'id': f'T{i}', 'status': 'PLANNED', 'title': f'Task {i}'}
+            for i in range(1, 151)
+        ]
+        s['state']['current']['active_task'] = 'T150'
+        for i in range(151, 161):
+            s['state']['tasks'].append({
+                'id': f'T{i}', 'status': 'ACCEPTED',
+                'evidence': [{'verified': True, 'ref': 'https://example.com/verified-sample'}],
+                'acceptance': {'decision': 'APPROVED'}, 'qa': {'status': 'PASS'}
+            })
+        m = mod.moment(s)
+        self.assertIn('Open: 150 | Accepted: 10 | Cancelled: 0', m)
+        self.assertIn('- T150: Task 150 (PLANNED)', m)
+        self.assertIn('138 more open tasks', m)
+        self.assertIn('7 earlier accepted tasks', m)
+        self.assertNotIn('- T149:', m)
+        self.assertLess(len(m), 2300)
+
+    def test_optimized_python_cannot_disable_validation(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            mod.init(root, 'sample-project', 'Name')
+            result = subprocess.run(
+                [sys.executable, '-O', str(ROOT / 'tools' / 'pcs_solo.py'),
+                 'verify', '--root', str(root)],
+                capture_output=True, text=True, check=False
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('validation must remain active', result.stderr)
+
     def test_no_silent_project_identity_change(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
