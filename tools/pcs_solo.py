@@ -44,6 +44,15 @@ def check(obj):
         assert isinstance(s.get(key), list), f'Invalid {key} list'
     assert isinstance(s.get('product_map'), dict) and isinstance(s.get('architecture_map'), dict), 'Missing maps'
     assert isinstance(s.get('policy'), dict), 'Missing policy'
+    visibility = s['policy'].get('repository_visibility', 'USER_CHOICE')
+    assert visibility in ('PUBLIC', 'PRIVATE', 'USER_CHOICE'), 'Invalid repository visibility'
+    if visibility == 'PUBLIC':
+        assert s['policy'].get('content_classification') == 'PUBLIC' and s['policy'].get('public_content_reviewed') is True, 'PUBLIC_POLICY_REQUIRED: explicit review'
+        for group in TYPES + ['source_refs', 'decisions', 'risks', 'artifacts']:
+            assert all(isinstance(x, dict) and x.get('classification') == 'PUBLIC' for x in s[group]), 'PUBLIC_DATA_BLOCKED: ' + group
+    raw = stable(s)
+    assert not re.search(r'(?<![A-Za-z0-9_])(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{25,}|AKIA[A-Z0-9]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)', raw), 'SECURITY_BLOCKED: suspected credentials'
+
     current = s.get('current')
     assert isinstance(current, dict) and isinstance(current.get('next_action'), str) and current['next_action'].strip(), 'Missing next_action'
     seen, tasks = set(), {}
@@ -163,6 +172,43 @@ def checkpoint(root, new_obj, expected):
     return event_name
 
 
+
+def inspect(obj, group='tasks', limit=12):
+    check(obj)
+    assert group in TYPES + ['source_refs', 'decisions', 'risks', 'artifacts'], 'INVALID_GROUP'
+    assert type(limit) is int and 1 <= limit <= 50, 'INVALID_LIMIT'
+    items = obj['state'][group]
+    active = obj['state']['current'].get('active_task')
+    open_items = [x for x in items if x.get('status') not in ('ACCEPTED','CANCELLED')] if group in TYPES else items
+    prioritized = sorted(open_items, key=lambda x: (0 if x.get('id') == active else 1 if x.get('status') in ('BLOCKED','IN_PROGRESS','TECH_DONE','INTEGRATION_PENDING') else 2))
+    chosen = prioritized[:limit]
+    return {'schema':'pcs.solo.inspect.v1','revision':obj['revision'],'group':group,'total':len(items),
+      'shown':[{'id':x.get('id', '#'+str(items.index(x)+1)), 'status':x.get('status')} for x in chosen],
+      'remaining':len(open_items)-len(chosen), 'warning':'Not an external evidence or approval verification'}
+
+def diff(before, after, limit=12):
+    check(before)
+    check(after)
+    assert before['state']['slug'] == after['state']['slug'], 'PROJECT_MISMATCH'
+    assert after['revision'] > before['revision'], 'NON_INCREMENTAL_REVISION'
+    assert type(limit) is int and 1 <= limit <= 50, 'INVALID_LIMIT'
+    out = {}
+    for group in TYPES + ['source_refs', 'decisions', 'risks', 'artifacts']:
+        def entries(doc):
+            return {str(x.get('id', '#'+str(i+1))):x for i,x in enumerate(doc['state'][group])}
+        a,b = entries(before),entries(after)
+        changes = []
+        for key in sorted(set(a)|set(b)):
+            if key not in a: changes.append({'id':key,'kind':'ADDED'})
+            elif key not in b: changes.append({'id':key,'kind':'REMOVED'})
+            elif stable(a[key]) != stable(b[key]):
+                fields = sorted(k for k in set(a[key])|set(b[key]) if a[key].get(k)!=b[key].get(k))
+                changes.append({'id':key,'kind':'CHANGED','fields_changed':fields[:20],
+                    'status_before':a[key].get('status'),'status_after':b[key].get('status')})
+        out[group] = {'total':len(changes),'shown':changes[:limit],'remaining':max(0,len(changes)-limit)}
+    return {'schema':'pcs.solo.diff.v1','from':before['revision'],'to':after['revision'],'groups':out,
+            'warning':'Structural diff only; free text omitted'}
+
 def cli():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest='command', required=True)
@@ -176,10 +222,25 @@ def cli():
     checkpoint_cmd.add_argument('--root', type=Path, required=True)
     checkpoint_cmd.add_argument('--input', type=Path, required=True)
     checkpoint_cmd.add_argument('--expect', type=int, required=True)
+    inspect_cmd = sub.add_parser('inspect')
+    inspect_cmd.add_argument('--root', type=Path, required=True)
+    inspect_cmd.add_argument('--group', default='tasks')
+    inspect_cmd.add_argument('--limit', type=int, default=12)
+    diff_cmd = sub.add_parser('diff')
+    diff_cmd.add_argument('--before', type=Path, required=True)
+    diff_cmd.add_argument('--after', type=Path, required=True)
+    diff_cmd.add_argument('--limit', type=int, default=12)
     args = p.parse_args()
     if args.command == 'init':
         obj = init(args.root, args.slug, args.name)
         print('initialized revision', obj['revision'])
+    elif args.command == 'inspect':
+        obj = json.loads((args.root / 'pcs' / 'STATE.json').read_text(encoding='utf-8'))
+        print(json.dumps(inspect(obj, args.group, args.limit), ensure_ascii=False, indent=2))
+    elif args.command == 'diff':
+        a = json.loads(args.before.read_text(encoding='utf-8'))
+        b = json.loads(args.after.read_text(encoding='utf-8'))
+        print(json.dumps(diff(a, b, args.limit), ensure_ascii=False, indent=2))
     elif args.command == 'verify':
         obj = json.loads((args.root / 'pcs' / 'STATE.json').read_text(encoding='utf-8'))
         check(obj)
