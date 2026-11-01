@@ -76,34 +76,55 @@ def append_event(markdown,event):
 def propose_from_active(markdown,doc,change,tasks=None,features=None):
     context=active_context(doc,tasks,features)
     guard(identifier(change.get('id')),'INVALID_CHANGE_ID')
-    event={'kind':'PROPOSE','id':change['id'],**context,
-        'based_on':parse_ledger(markdown)['tips'].get(context['item_key'],'BASELINE'),
+    ledger=parse_ledger(markdown)
+    prior_id=change.get('revision_of')
+    prior=ledger['proposals'].get(prior_id) if prior_id is not None else None
+    guard(prior_id is None or prior is not None,'UNKNOWN_REVISION_TARGET')
+    guard(prior is None or prior['task_id']==context['task_id'] or
+          (context['feature_id'] is not None and prior['feature_id']==context['feature_id']),
+          'UNRELATED_REVISION_TARGET')
+    item_key=prior['item_key'] if prior else change['id']
+    event={'kind':'PROPOSE','id':change['id'],**context,'item_key':item_key,
+        'based_on':ledger['tips'].get(item_key,'BASELINE'),
         'before':change.get('before'),'after':change.get('after'),'reason':change.get('reason'),
         'at':change.get('at') or datetime.now(timezone.utc).isoformat()}
-    if 'source_ref' in change:event['source_ref']=change['source_ref']
+    if prior_id is not None:event['revision_of']=prior_id
+    if 'source_ref' in change:
+        guard(good(change['source_ref'],1024),'INVALID_SOURCE_REF')
+        event['source_ref']=change['source_ref']
     return event,append_event(markdown,event)
 
-def summary(markdown,item_key=None,limit=6):
+def summary(markdown,item_key=None,limit=6,offset=0,max_items=10):
     guard(type(limit) is int and 1<=limit<=20,'INVALID_LIMIT')
+    guard(type(offset) is int and offset>=0,'INVALID_OFFSET')
+    guard(type(max_items) is int and 1<=max_items<=20,'INVALID_MAX_ITEMS')
     if item_key is not None:guard(identifier(item_key),'INVALID_ITEM_KEY')
     ledger=parse_ledger(markdown);proposals=ledger['proposals'];decided=ledger['decided'];tips=ledger['tips']
-    keys=[item_key] if item_key else list(dict.fromkeys(p['item_key'] for p in proposals.values()))
+    grouped={}
+    for p in proposals.values():grouped.setdefault(p['item_key'],[]).append(p)
+    keys=[key for key,group in grouped.items() if item_key is None or key==item_key or
+          any(p['task_id']==item_key or p.get('feature_id')==item_key for p in group)]
     items=[]
-    for key in keys:
-        all_=[p for p in proposals.values() if p['item_key']==key]
+    for key in keys[offset:offset+max_items]:
+        all_=grouped[key]
         tip=tips.get(key);final=proposals.get(tip)
-        items.append({'item_key':key,'task_id':all_[-1]['task_id'] if all_ else None,
-            'srs_ref':all_[-1]['srs_ref'] if all_ else 'UNMAPPED',
-            'effective_change_id':tip,'effective_delta':{'before':final['before'],'after':final['after']} if final else None,
-            'pending_count':sum(p['id'] not in decided for p in all_), 'history_count':len(all_),
+        items.append({'item_key':key,'task_id':all_[-1]['task_id'],
+            'feature_id':all_[-1].get('feature_id'),'srs_ref':all_[-1]['srs_ref'],
+            'effective_change_id':tip,
+            'effective_delta':{'before':final['before'],'after':final['after']} if final else None,
+            'pending_count':sum(p['id'] not in decided for p in all_),
+            'history_count':len(all_),
             'recent_change_ids':[p['id'] for p in all_[-limit:]],'verified_external_decision':False})
-    return {'schema':'pcs.srs-changes.v1','items':items,
+    next_offset=offset+len(items) if offset+len(items)<len(keys) else None
+    return {'schema':'pcs.srs-changes.v1','items':items,'total_items':len(keys),
+        'returned_items':len(items),'next_offset':next_offset,
         'warning':'Recorded decision needs independent GitHub verification; never auto-update original SRS.'}
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--root',type=Path,default=Path('.'))
     p.add_argument('--item');p.add_argument('--limit',type=int,default=6)
-    p.add_argument('--record',type=Path);p.add_argument('--expect');a=p.parse_args()
+    p.add_argument('--record',type=Path);p.add_argument('--expect')
+    p.add_argument('--offset',type=int,default=0);p.add_argument('--max-items',type=int,default=10);a=p.parse_args()
     file=a.root/'pcs'/'SRS_CHANGES.md'
     if a.record:
         lock=file.with_suffix('.md.lock')
@@ -123,7 +144,7 @@ def main():
             finally:lock.unlink(missing_ok=True)
     else:
         current=file.read_text(encoding='utf-8') if file.exists() else HEADER
-        print(json.dumps(summary(current,a.item,a.limit),ensure_ascii=False,indent=2))
+        print(json.dumps(summary(current,a.item,a.limit,a.offset,a.max_items),ensure_ascii=False,indent=2))
 if __name__=='__main__':
     try:main()
     except Exception as exc:raise SystemExit(str(exc)) from exc
