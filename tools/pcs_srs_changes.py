@@ -16,9 +16,12 @@ def guard(ok,code):
 def identifier(x):return isinstance(x,str) and bool(ID.fullmatch(x))
 def good(x,max_len=2000):return isinstance(x,str) and bool(x.strip()) and len(x)<=max_len
 def date(x):
-    if not good(x,64):return False
-    try:datetime.fromisoformat(x.replace('Z','+00:00'));return True
-    except (ValueError,TypeError):return False
+    if not good(x,64) or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})',x):
+        return False
+    try:
+        parsed=datetime.fromisoformat(x.replace('Z','+00:00'))
+        return parsed.tzinfo is not None and abs(parsed.utcoffset().total_seconds())<=14*3600
+    except (ValueError,TypeError,OverflowError):return False
 
 def parse_ledger(markdown=HEADER):
     guard(isinstance(markdown,str) and markdown.startswith(HEADER),'INVALID_HEADER')
