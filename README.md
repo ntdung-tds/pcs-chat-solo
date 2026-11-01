@@ -6,6 +6,8 @@
 
 Khi AI bắt đầu, chỉ cần đọc [`START_HERE.md`](START_HERE.md) và **yêu cầu/trạng thái của repository dự án**. Không yêu cầu đọc toàn bộ `pcs-chat-solo`; `docs/WORKFLOW.md` mở khi lập kế hoạch phức tạp, mẫu STATE chỉ khi khởi tạo, còn `tools/`, `tests/` và CI chỉ khi trực tiếp phát triển hoặc kiểm thử PCS. Khi tiếp tục dự án, ưu tiên `pcs/MOMENT.md`, `pcs/STATE.json`, phần code và test vừa liên quan.
 
+**Skill tùy chọn:** Có một [PCS Chat Solo Skill](.agents/skills/pcs-chat-solo/SKILL.md) dạng ngắn cho ứng dụng AI hỗ trợ nhận diện Skill theo thư mục repository. **Không cần cài Skill để dùng PCS**, và không có Skill con cho SRS, checklist hay checkpoint. Với ChatGPT, file trên GitHub không đồng nghĩa Skill đã được cài vào tài khoản.
+
 ## Start
 
 1. Open [`PROMPT.md`](PROMPT.md), copy the standard prompt into a chat with one AI.
