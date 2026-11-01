@@ -39,4 +39,32 @@ class SRSChangeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'DECISION_PROVENANCE'):
             append_event(m,{'kind':'DECIDE','id':'CR-1','decision':'APPROVED','actor':'owner','ref':'','at':'2026-11-01T10:00:00Z'})
         self.assertFalse(summary(append_event(m,decide('CR-1')))['items'][0]['verified_external_decision'])
+    def test_two_deltas_on_same_feature_and_explicit_revision(self):
+        m=HEADER
+        first,m=propose_from_active(m,state,{'id':'CR-password','before':'12 chars','after':'8 chars','reason':'Owner password change'})
+        second,m=propose_from_active(m,state,{'id':'CR-timeout','before':'30 min','after':'15 min','reason':'Owner timeout change'})
+        m=append_event(m,decide('CR-password'))
+        m=append_event(m,decide('CR-timeout'))
+        out=summary(m,item_key='FEAT-2')
+        self.assertEqual(out['total_items'],2)
+        self.assertEqual([x['effective_change_id'] for x in out['items']],['CR-password','CR-timeout'])
+        event,m=propose_from_active(m,state,{'id':'CR-password-v2','revision_of':'CR-password','before':'8 chars','after':'10 chars','reason':'Owner revised password rule'})
+        self.assertEqual(event['item_key'],'CR-password')
+        m=append_event(m,decide('CR-password-v2'))
+        out=summary(m,item_key='FEAT-2')
+        self.assertEqual([x['effective_change_id'] for x in out['items']],['CR-password-v2','CR-timeout'])
+        with self.assertRaisesRegex(ValueError,'UNKNOWN_REVISION'):
+            propose_from_active(m,state,{'id':'CR-x','revision_of':'CR-missing','before':'a','after':'b','reason':'change'})
+
+    def test_summary_is_bounded_and_pageable(self):
+        m=HEADER
+        for i in range(24):
+            _,m=propose_from_active(m,state,{'id':f'CR-{i}','before':'A','after':'B','reason':'Change'})
+        a,b,c=summary(m),summary(m,offset=10),summary(m,offset=20)
+        self.assertEqual((a['total_items'],len(a['items']),a['next_offset']),(24,10,10))
+        self.assertEqual((len(b['items']),b['next_offset']),(10,20))
+        self.assertEqual((len(c['items']),c['next_offset']),(4,None))
+        with self.assertRaisesRegex(ValueError,'INVALID_MAX_ITEMS'):
+            summary(m,max_items=100)
+
 if __name__=='__main__':unittest.main()
