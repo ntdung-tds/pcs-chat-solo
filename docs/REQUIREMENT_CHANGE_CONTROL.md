@@ -1,30 +1,47 @@
-# PCS Chat Solo — SRS/đề cương change history
+# PCS SRS/đề cương changes — one-file active-task ledger (v2)
 
-**Một mục được sửa nhiều lần, nhưng chỉ bản đã được chốt cuối cùng mới có hiệu lực.**
+**Owner decision (binding):** During implementation, automatically capture **only deltas** from the original SRS/outline. Use the active PCS Task/Feature as context; **never require the Owner to know SRS section numbers or create CRs**. Keep the original SRS untouched. **Only after the entire project finishes** prepare a read-only comparison; SRS synchronization needs a separate explicit Owner decision and is optional.
 
-- SRS/đề cương gốc giữ nguyên: mã mục, nguồn, SHA-256, bản/commit.
-- Mỗi lần đề xuất sửa được tạo `CR-###` và tài liệu ở **repository dự án** `docs/project/changes/CR-###.md` (đảm bảo có Git history); ghi lý do, phần cũ, phần mới, phạm vi ảnh hưởng, tác giả, thời điểm, ý kiến Owner và link Issue/PR.
-- Chỉ khi Owner chốt và quyết định có bằng chứng xác minh, CR mới chuyển sang `APPROVED`. Các sửa `PROPOSED` hoặc `REJECTED` không thay đổi yêu cầu có hiệu lực. Bản duy nhất có hiệu lực được tìm bằng chuỗi `based_on`: `BASELINE → CR-001 → CR-002`.
-- Ví dụ: 12 ký tự (SRS) → CR-001 chốt 10 → CR-002 chốt 8 → CR-003 đang đề xuất 9: yêu cầu hiệu lực là **8 ký tự**. Cấm chấp thuận hai bản cùng thay thế một phiên bản; phải reconcile và chốt lại rõ ràng.
-- Lưu index gọn vào `pcs/STATE.json` tại `state.requirement_changes[]` (trường **tùy chọn**, không đổi schema). Mỗi record có `id`, `item_id`, `baseline_ref`, `baseline_sha256` (64 hex), `based_on`, `status`. Với `APPROVED`, yêu cầu thêm `final_ref`, `final_sha256`, `decision.by`, `decision.ref` đến bằng chứng trên GitHub. Nội dung chi tiết nằm trong các CR đã version hóa, không chép dài vào context.
-- AI phải đối chiếu thật thông tin xác minh Owner, bản gốc, final wording và digest; metadata `APPROVED` **không phải** tự động chứng minh phê duyệt thật. Với thao tác production, IAM, bảo mật, xóa dữ liệu, chi phí, phải có approval cấp nền tảng phù hợp.
-- Đưa checklist tiến độ vào bốn cổng riêng: **Change approved → Implementation updated → Tests updated/passed → Feature accepted**. Việc chốt yêu cầu không đồng nghĩa đã sửa code hoặc nghiệm thu.
-- Khi resume, chỉ lấy bản chốt hiện hành, số yêu cầu đang đề xuất và mã CR liên quan, không nạp cả lịch sử. Khi ghi, giữ CAS revision, PR/branch protection và kiểm tra Git HEAD. Không dual-write nguồn thứ hai.
+## Project file and authority
 
-## Chính sách cố định: Chỉ lưu thay đổi, không đồng bộ SRS trong lúc triển khai
+New projects store the **sole new change history** in `pcs/SRS_CHANGES.md` inside the **project's repository**, not in the public PCS toolkit. Initialize it on the first real deviation:
 
-**Quyết định của Owner:** SRS/đề cương ban đầu là tài liệu tham chiếu được giữ nguyên suốt vòng đời phát triển. Dù CR đã được đề xuất, chốt, triển khai, kiểm thử hoặc nghiệm thu, PCS **không được tự sửa, ghi đè hoặc đồng bộ SRS/đề cương**. Một CR được chốt chỉ cập nhật **yêu cầu có hiệu lực để thực hiện dự án trong PCS**, không có nghĩa tài liệu gốc đã được cập nhật.
-
-- **Trong quá trình làm:** Lưu tất cả lần đề xuất, sửa, từ chối, chốt và thay thế; giữ nội dung trước/sau, lý do, người đề xuất, quyết định, thời điểm và bằng chứng GitHub. AI triển khai, kiểm thử, nghiệm thu theo **bản chốt cuối hiện hành** của từng mục. Không tạo công việc cập nhật SRS tự động, không lấy việc SRS chưa sửa làm lý do chặn nghiệm thu chức năng hay hoàn tất dự án.
-- **Khi hoàn tất toàn bộ dự án:** PCS chỉ **tổng hợp báo cáo thay đổi để Owner xem xét** theo từng mục SRS/đề cương: bản gốc, bản chốt cuối, lịch sử CR (kể cả bản bị thay thế/từ chối), liên kết bằng chứng và những đề xuất chưa chốt. Báo cáo phải ghi **CHỜ OWNER QUYẾT ĐỊNH — CHƯA ĐỒNG BỘ**.
-- **Chỉ nếu Owner quyết định đồng bộ:** Khi ấy mới tạo đề xuất cập nhật tài liệu/PR riêng, giữ nguyên bản gốc và lịch sử, kiểm tra tác động và nghiệm thu thay đổi tài liệu. Không suy diễn quyền đồng bộ từ lời đồng ý một CR, nghiệm thu chức năng, CI PASS, việc hoàn tất dự án hoặc lệnh tiếp tục PCS. Nếu Owner hoãn/không đồng ý, giữ SRS cũ và lưu lịch sử để dùng sau.
-
-**Ba trạng thái độc lập:** CR được chốt ≠ chức năng hoàn thành/nghiệm thu ≠ SRS được đồng bộ. Đồng bộ SRS là **không bắt buộc** và luôn do Owner quyết định sau khi hoàn tất dự án.
-
-Công cụ tùy chọn (chỉ đọc, không kết nối GitHub):
-
-```bash
-python tools/pcs_requirements.py --file=/project/pcs/STATE.json --item=FEAT-001
+```markdown
+# PCS SRS Changes
+<!-- pcs-srs-changes:v1 -->
 ```
 
-Công cụ kiểm tra record/chuỗi quyết định; **không** xác thực nguồn ngoài, phê duyệt hay tiến độ triển khai. Không có Python vẫn có thể dùng GitHub connector và cùng nguyên tắc trên.
+`pcs/STATE.json` (Universal/Solo) or native `pcs/project.json` + `pcs/tasks.json` (Desktop) continues to own **project/task progress**. It is **not** a second requirement-change log. Do not copy the complete ledger into STATE/Moment. The older optional `requirement_changes[]` in state is **legacy-compatible read-only** for existing projects; do not dual-write or silently migrate it. An existing project with a populated legacy ledger requires explicit reconciliation before adopting the new file; an empty legacy array is not a reason to keep writing there.
+
+The SRS baseline is read-only. A CR records task/feature context, `srs_ref` if it can be grounded, before/after text, reason, timestamp, and decision provenance. Only changes are recorded — not the complete SRS or large documents.
+
+## Human workflow (no forms)
+
+1. Owner says naturally e.g. "Mật khẩu chỉ cần 8 ký tự" while a Task is under way. Agent obtains **current active Task** from PCS state, links to a **unique** related Feature when known and checks the last effective change for that context. It compares the relevant baseline/code/acceptance criterion. The Agent creates `CR-...` automatically. The user never supplies `3.2`, a CR number or a file name.
+2. If task links to multiple features, attach to the **Task** instead of guessing a Feature. If a SRS section cannot be proven, record `srs_ref: "UNMAPPED"` and resolve it later. If no valid active task exists, first identify the actual task; never invent context.
+3. Append a `PROPOSE` event for each distinct delta, then a `DECIDE` event when genuinely decided (APPROVED/REJECTED). Never erase earlier proposals or decisions. A new proposal does **not** replace a previously approved change. A decision must reference its provenance; an ordinary chat direction can be marked as an **unverified working decision**, not as authenticated production/IAM/security approval. Sensitive changes always need verified authorization.
+4. The **latest approved change in a non-forking sequence** is the implementation requirement. Contradictory approvals on the same previous version are blocked until reconciled. Project QA and product acceptance are separate from the change decision.
+5. On chat resume, load the current Task and only the short relevant change summary and any needed final delta. Fetch the whole history only for troubleshooting or end-of-project report. **Never automatically change the source SRS.**
+6. Once the project is complete, generate **FOR OWNER DECISION — NOT APPLIED** change comparison, grouped by SRS reference, or by task/feature when still UNMAPPED. Do not create an SRS update PR or sync unless the Owner separately requests it.
+
+## Append-only event format (one Markdown file)
+
+Entries are a short Markdown heading followed by one JSON event in a `pcs-change` fenced block. The event store is machine-validatable, readable in GitHub and searchable by ID, without giant nested JSON blobs. The first event is e.g.:
+
+```pcs-change
+{"kind":"PROPOSE","id":"CR-1","task_id":"TASK-5","feature_id":"FEAT-2","item_key":"FEAT-2","srs_ref":"UNMAPPED","mapping":"ACTIVE_CONTEXT","ambiguous_features":false,"based_on":"BASELINE","before":"Tối thiểu 12 ký tự","after":"Tối thiểu 8 ký tự","reason":"Owner thay đổi khi đang làm task","at":"2026-11-01T10:00:00Z"}
+```
+
+A later decision is another event with the **same CR ID**: `{"kind":"DECIDE","id":"CR-1","decision":"APPROVED","actor":"owner","ref":"source-of-decision","at":"2026-11-01T10:01:00Z"}`. The decision record alone is not external verification. Do not fabricate refs.
+
+## Agent tools and token limits
+
+- Universal/Desktop (optional Node): `tools/pcs-srs-changes.mjs`
+- Chat Solo (optional Python): `tools/pcs_srs_changes.py`
+- Read active change only: `node tools/pcs-srs-changes.mjs --root=/project --item=FEAT-2` (Solo: `python tools/pcs_srs_changes.py --root=/project --item=FEAT-2`).
+- For recording, an Agent creates a small local JSON event request and calls `--record=/tmp/change.json --root=/project`; a `PROPOSE` request can omit task/feature/section because the helper derives them from current PCS state (Desktop also needs `--desktop=true`). An explicit `DECIDE` references the CR.
+- If the Agent works through a GitHub connector rather than CLI, it can append the same format, but must read current blob SHA/revision, validate before updating, use GitHub conditional updates/PR controls and re-read commit. **Do not assume the optional local lock serializes separate GitHub Agents.**
+- Tool output is bounded to ID, the selected item's effective delta, counts and a handful of references. Large local file parsing does not require pasting the entire ledger into the model context. On connectors that expose only whole files, consider a future selective index/splitting **after measurement**, not as the default.
+- Initial single-file strategy is deliberately simple. If concurrent writes or file size measurably cause problems, shard by item later behind the same interface. This is **not** automatic today.
+
+**Security / limits:** Enforce repository data classification and access, do not write restricted information in public repos. `verified_external_decision:false` is deliberate; external identity, link, SHA, SRS section mapping and real deployment/tests require independent checks. No new state schema, no changes to the locked Desktop distribution, no automatic migration or SRS sync.
