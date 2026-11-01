@@ -2,7 +2,7 @@ name: Bootstrap PCS Chat Solo source
 on:
   push:
     branches: [main]
-    paths: ['bootstrap/edition-seed.tar.gz']
+    paths: ['bootstrap/part-03.b64']
 permissions:
   contents: write
 jobs:
@@ -18,9 +18,9 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path, PurePosixPath
-          import hashlib, io, tarfile
-          src=Path('bootstrap/edition-seed.tar.gz')
-          raw=src.read_bytes()
+          import base64, hashlib, io, tarfile
+          parts=[Path(f'bootstrap/part-{i:02d}.b64') for i in range(4)]
+          raw=base64.b64decode(''.join(p.read_text() for p in parts),validate=True)
           assert hashlib.sha256(raw).hexdigest()=='bef2fd0c3ccc374c04b609cf91b3a4aeacef90beab02535cfc3ece93e210fa10','Edition seed SHA256 mismatch'
           with tarfile.open(fileobj=io.BytesIO(raw), mode='r:gz') as archive:
               members=archive.getmembers()
@@ -37,7 +37,7 @@ jobs:
                   else:
                       target.parent.mkdir(parents=True,exist_ok=True)
                       target.write_bytes(data)
-          src.unlink()
+          for part in parts: part.unlink()
           Path('.github/workflows/bootstrap.yml').unlink()
           Path('bootstrap').rmdir()
           PY
