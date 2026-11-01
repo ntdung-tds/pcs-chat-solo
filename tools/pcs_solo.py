@@ -31,6 +31,8 @@ def digest(obj):
 
 
 def check(obj):
+    if not __debug__:
+        raise RuntimeError('PCS Solo refuses Python -O: state validation must remain active')
     assert isinstance(obj, dict) and obj.get('schema') == 'pcs.solo.v1', 'Invalid wrapper schema'
     assert type(obj.get('revision')) is int and obj['revision'] > 0, 'Invalid revision'
     s = obj.get('state')
@@ -93,7 +95,23 @@ def moment(obj):
         f'- Next action: {s["current"]["next_action"]}',
         f'- Blockers: {"; ".join(s["current"].get("blockers", [])) or "None"}', '',
         '## Tasks']
-    rows += [f'- {t["id"]}: {t.get("title", t["id"])} ({t["status"]})' for t in s['tasks']] or ['- None']
+    tasks = s['tasks']
+    # Keep the human/AI handoff short; the full backlog lives in canonical STATE.
+    open_tasks = [t for t in tasks if t['status'] not in ('ACCEPTED', 'CANCELLED')]
+    finished = [t for t in tasks if t['status'] == 'ACCEPTED']
+    active_id = s['current'].get('active_task')
+    active = [t for t in open_tasks if t['id'] == active_id]
+    queued = [t for t in open_tasks if t['id'] != active_id]
+    selected_open = active + queued[:max(0, 12 - len(active))]
+    selected_done = finished[-3:]
+    rows += [f'- Open: {len(open_tasks)} | Accepted: {len(finished)} | Cancelled: '
+             f'{len(tasks) - len(open_tasks) - len(finished)}']
+    rows += [f'- {t["id"]}: {t.get("title", t["id"])} ({t["status"]})'
+             for t in selected_open + selected_done] or ['- None']
+    if len(open_tasks) > len(selected_open):
+        rows.append(f'- ... {len(open_tasks) - len(selected_open)} more open tasks in pcs/STATE.json')
+    if len(finished) > len(selected_done):
+        rows.append(f'- ... {len(finished) - len(selected_done)} earlier accepted tasks in pcs/STATE.json')
     rows += ['', '## Acceptance', '- Evidence and Owner approval must be verified outside the state file.',
              '- This document is derived, not a second source of truth.', '']
     return '\n'.join(rows)
