@@ -14,6 +14,12 @@ Khi AI bắt đầu, chỉ cần đọc [`START_HERE.md`](START_HERE.md) và **y
 
 The Project Owner reviews completed features, business flows and releases, while the AI manages planning, implementation, verification and project continuity.
 
+## What Solo includes (and what it does not automate yet)
+
+Solo covers requirements, planning, code changes through the AI's **actual connected tools**, validation, QA evidence and cross-chat project handoff. It ships a state template and optional local checkpoint validator. **It does not include a native GitHub sync daemon or background execution service.** For persistence through chat connectors, follow [GitHub continuity](docs/GITHUB_CONTINUITY.md); GitHub actions/permission checks must actually run before claiming success.
+
+Automated tests validate the standalone state helper and file integrity. The [acceptance matrix](docs/ACCEPTANCE_MATRIX.md) tracks real private-GitHub/bootstrap/continuity tests separately; do not mistake unit PASS for end-to-end integration certification.
+
 ## Separation and project storage
 
 `pcs-chat-solo` is a **public package of instructions and optional validation tools**. It must never store an individual project's SRS, credentials, production data, screenshots containing secrets or user-private state.
