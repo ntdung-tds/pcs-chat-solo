@@ -8,7 +8,7 @@
 
 ## Optional Skill
 
-A single, short Skill is available in `.agents/skills/pcs-chat-solo/SKILL.md` for AI hosts that discover repository Skills. This does **not** install itself into ChatGPT or any other host. Prompt-first users can keep using this file without a Skill; do not create extra Skills for SRS changes, checklists or handoff.
+A single, short Skill is available in `.agents/skills/pcs-chat-solo/SKILL.md` for AI hosts that discover repository Skills. It is discovered only when the host uses this toolkit repository as a Skill-capable workspace or the Skill is installed in a supported user/project Skill location; a different project repository does not inherit this Skill. This does **not** install itself into ChatGPT or any other host. Prompt-first users can keep using this file without a Skill; do not create extra Skills for SRS changes, checklists or handoff.
 
 ## Start / resume
 1. Read the user's request and available project sources. If the project exists, read its current `pcs/MOMENT.md` first, reconcile its revision with canonical `pcs/STATE.json`/HEAD using a bounded query where tools allow, then inspect only the relevant code, requirements and recent changes. If no PCS state exists, open `templates/STATE.example.json` **once** to initialize it.
