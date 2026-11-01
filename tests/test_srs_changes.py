@@ -16,7 +16,7 @@ class SRSChangeTests(unittest.TestCase):
         self.assertEqual(e['srs_ref'],'docs/SRS.md#security')
         self.assertEqual(len(parse_ledger(m)['events']),1)
     def test_ambiguous_context_falls_back_to_task(self):
-        s={'state':dict(state['state'],features:[{'id':'F1','required_tasks':['TASK-5']},
+        s={'state':dict(state['state'],features=[{'id':'F1','required_tasks':['TASK-5']},
                      {'id':'F2','required_tasks':['TASK-5']}])}
         self.assertEqual(active_context(s)['item_key'],'TASK-5')
         self.assertTrue(active_context(s)['ambiguous_features'])
