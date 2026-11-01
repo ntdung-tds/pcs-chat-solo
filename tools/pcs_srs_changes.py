@@ -76,33 +76,50 @@ def append_event(markdown,event):
 def propose_from_active(markdown,doc,change,tasks=None,features=None):
     context=active_context(doc,tasks,features)
     guard(identifier(change.get('id')),'INVALID_CHANGE_ID')
-    event={'kind':'PROPOSE','id':change['id'],**context,
-        'based_on':parse_ledger(markdown)['tips'].get(context['item_key'],'BASELINE'),
+    # The agent derives a stable criterion slug; the Owner never supplies a section number.
+    # Feature/Task identifies context, but is not a unique requirement.
+    requirement_key=change.get('requirement_key')
+    guard(isinstance(requirement_key,str) and bool(re.fullmatch(r'[a-z][a-z0-9-]{1,39}',requirement_key)),
+          'REQUIREMENT_KEY_REQUIRED')
+    item_key=context['item_key']+'.'+requirement_key
+    guard(identifier(item_key),'REQUIREMENT_SCOPE_TOO_LONG')
+    ledger=parse_ledger(markdown)
+    prior=ledger['proposals'].get(ledger['tips'].get(item_key))
+    if prior:guard(change.get('before')==prior['after'],'DELTA_BASELINE_MISMATCH')
+    event={'kind':'PROPOSE','id':change['id'],**context,'item_key':item_key,
+        'requirement_key':requirement_key,'based_on':ledger['tips'].get(item_key,'BASELINE'),
         'before':change.get('before'),'after':change.get('after'),'reason':change.get('reason'),
         'at':change.get('at') or datetime.now(timezone.utc).isoformat()}
     if 'source_ref' in change:event['source_ref']=change['source_ref']
     return event,append_event(markdown,event)
 
-def summary(markdown,item_key=None,limit=6):
+def summary(markdown,item_key=None,limit=6,task_id=None,feature_id=None,max_items=8):
     guard(type(limit) is int and 1<=limit<=20,'INVALID_LIMIT')
-    if item_key is not None:guard(identifier(item_key),'INVALID_ITEM_KEY')
+    guard(type(max_items) is int and 1<=max_items<=50,'INVALID_MAX_ITEMS')
+    for x in (item_key,task_id,feature_id):
+        if x is not None:guard(identifier(x),'INVALID_FILTER')
     ledger=parse_ledger(markdown);proposals=ledger['proposals'];decided=ledger['decided'];tips=ledger['tips']
-    keys=[item_key] if item_key else list(dict.fromkeys(p['item_key'] for p in proposals.values()))
+    keys=[item_key] if item_key else list(dict.fromkeys(p['item_key'] for p in proposals.values()
+        if (not task_id or p['task_id']==task_id) and (not feature_id or p.get('feature_id')==feature_id)))
     items=[]
-    for key in keys:
+    for key in keys[:max_items]:
         all_=[p for p in proposals.values() if p['item_key']==key]
         tip=tips.get(key);final=proposals.get(tip)
         items.append({'item_key':key,'task_id':all_[-1]['task_id'] if all_ else None,
+            'feature_id':all_[-1].get('feature_id') if all_ else None,
+            'requirement_key':all_[-1].get('requirement_key') if all_ else None,
             'srs_ref':all_[-1]['srs_ref'] if all_ else 'UNMAPPED',
             'effective_change_id':tip,'effective_delta':{'before':final['before'],'after':final['after']} if final else None,
             'pending_count':sum(p['id'] not in decided for p in all_), 'history_count':len(all_),
             'recent_change_ids':[p['id'] for p in all_[-limit:]],'verified_external_decision':False})
-    return {'schema':'pcs.srs-changes.v1','items':items,
+    return {'schema':'pcs.srs-changes.v1','items':items,'total_items':len(keys),
+        'remaining_items':max(0,len(keys)-max_items),
         'warning':'Recorded decision needs independent GitHub verification; never auto-update original SRS.'}
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--root',type=Path,default=Path('.'))
-    p.add_argument('--item');p.add_argument('--limit',type=int,default=6)
+    p.add_argument('--item');p.add_argument('--task');p.add_argument('--feature');p.add_argument('--limit',type=int,default=6)
+    p.add_argument('--max-items',type=int,default=8)
     p.add_argument('--record',type=Path);p.add_argument('--expect');a=p.parse_args()
     file=a.root/'pcs'/'SRS_CHANGES.md'
     if a.record:
@@ -123,7 +140,7 @@ def main():
             finally:lock.unlink(missing_ok=True)
     else:
         current=file.read_text(encoding='utf-8') if file.exists() else HEADER
-        print(json.dumps(summary(current,a.item,a.limit),ensure_ascii=False,indent=2))
+        print(json.dumps(summary(current,a.item,a.limit,task_id=a.task,feature_id=a.feature,max_items=a.max_items),ensure_ascii=False,indent=2))
 if __name__=='__main__':
     try:main()
     except Exception as exc:raise SystemExit(str(exc)) from exc
