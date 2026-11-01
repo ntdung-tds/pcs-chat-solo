@@ -4,7 +4,7 @@ Check each capability against the **actual chat platform and a separate private 
 
 | Case | Expected result | Status (2026-11-01) |
 | --- | --- | --- |
-| New private project with repository creation permission | Correct repository, initial STATE and Moment persisted and re-read | NOT_RUN |
+| New Owner-selected Public or Private project with repository creation permission | Correct repository, initial STATE and Moment persisted and re-read | NOT_RUN |
 | Existing repo adoption | Preserve files, branches and unrelated history, resume safely | NOT_RUN |
 | New chat/provider after checkpoint | Restores latest verified revision and next action | NOT_RUN |
 | Concurrent/stale GitHub revision | No force overwrite, detect conflict, reload/reconcile | NOT_RUN |
