@@ -93,7 +93,7 @@ def main():
     p.add_argument('--limit',type=int,default=8)
     a=p.parse_args()
     doc=json.loads(a.file.read_text(encoding='utf-8'))
-    from tools.pcs_solo import check
+    from pcs_solo import check
     check(doc)
     print(json.dumps(resolve(doc['state'].get('requirement_changes', []),a.item,a.limit),
         ensure_ascii=False,indent=2))
