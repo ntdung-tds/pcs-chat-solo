@@ -6,6 +6,10 @@
 
 **"Tiếp tục dự án theo PCS, sử dụng trạng thái mới nhất trên GitHub."** means resume the already identified project, using its latest verified GitHub state. First read the project's `pcs/MOMENT.md`, reconcile revision and GitHub HEAD with canonical `pcs/STATE.json`, then load only task-relevant changes, code, evidence and permissions. If multiple projects are plausible or no repository is known, ask only for the correct project URL. Do not assume GitHub access or pretend to persist changes when no write tool is available.
 
+## Optional Skill
+
+A single, short Skill is available in `.agents/skills/pcs-chat-solo/SKILL.md` for AI hosts that discover repository Skills. This does **not** install itself into ChatGPT or any other host. Prompt-first users can keep using this file without a Skill; do not create extra Skills for SRS changes, checklists or handoff.
+
 ## Start / resume
 1. Read the user's request and available project sources. If the project exists, read its current `pcs/MOMENT.md` first, reconcile its revision with canonical `pcs/STATE.json`/HEAD using a bounded query where tools allow, then inspect only the relevant code, requirements and recent changes. If no PCS state exists, open `templates/STATE.example.json` **once** to initialize it.
 2. Confirm actual tools, project repository and permissions. Never invent access, source contents, tests or deployments.
