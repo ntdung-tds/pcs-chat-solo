@@ -24,7 +24,7 @@ Automated tests validate the standalone state helper and file integrity. The [ac
 
 `pcs-chat-solo` is a **public package of instructions and optional validation tools**. It must never store an individual project's SRS, credentials, production data, screenshots containing secrets or user-private state.
 
-Each real project has its own **private GitHub repository by default**, with a **single canonical** `pcs/STATE.json` and derived `pcs/MOMENT.md`. Under `pcs/moments/`, append immutable checkpoint records when tools permit. Project GitHub Issues are optional for meaningful tasks; Projects, Drive and PR are optional depending on real tools and risk. Don't invent connector access or test results.
+Each real project has its own **Owner-selected Public or Private GitHub repository**, with a **single canonical** `pcs/STATE.json` and derived `pcs/MOMENT.md`. Under `pcs/moments/`, append immutable checkpoint records when tools permit. Project GitHub Issues are optional for meaningful tasks; Projects, Drive and PR are optional depending on real tools and risk. Don't invent connector access or test results.
 
 ## Continuity and approvals
 
