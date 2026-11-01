@@ -21,7 +21,8 @@ def context(doc, task_id=None, limit=6):
     if selected_id and task is None:
         raise ValueError('TASK_NOT_FOUND')
     flags = [flag for flag in SENSITIVE if task and task.get(flag) is True]
-    risk = str(task.get('risk', 'UNCLASSIFIED')).upper() if task else None
+    raw_risk = str(task.get('risk', 'UNKNOWN')).upper() if task else None
+    risk = raw_risk if raw_risk in ('LOW', 'NORMAL', 'HIGH', 'CRITICAL') else 'UNKNOWN' if task else None
     elevated = bool(task and (risk not in ('LOW', 'NORMAL') or flags or
                               task.get('classification') in ('CONFIDENTIAL', 'RESTRICTED')))
     active = [t for t in s['tasks'] if t['status'] not in ('ACCEPTED','CANCELLED')]
