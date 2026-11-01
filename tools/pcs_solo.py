@@ -50,6 +50,16 @@ def check(obj):
         assert s['policy'].get('content_classification') == 'PUBLIC' and s['policy'].get('public_content_reviewed') is True, 'PUBLIC_POLICY_REQUIRED: explicit review'
         for group in TYPES + ['source_refs', 'decisions', 'risks', 'artifacts']:
             assert all(isinstance(x, dict) and x.get('classification') == 'PUBLIC' for x in s[group]), 'PUBLIC_DATA_BLOCKED: ' + group
+    # Optional compact change-control index, still inside the canonical project state.
+    if 'requirement_changes' in s:
+        try:
+            from tools.pcs_requirements import resolve
+        except ModuleNotFoundError:
+            from pcs_requirements import resolve
+        resolve(s['requirement_changes'])
+        if visibility == 'PUBLIC':
+            assert all(isinstance(x, dict) and x.get('classification') == 'PUBLIC'
+                       for x in s['requirement_changes']), 'PUBLIC_DATA_BLOCKED: requirement_changes'
     raw = stable(s)
     assert not re.search(r'(?<![A-Za-z0-9_])(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{25,}|AKIA[A-Z0-9]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)', raw), 'SECURITY_BLOCKED: suspected credentials'
 
