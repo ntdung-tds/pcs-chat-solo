@@ -9,7 +9,7 @@ Hãy đọc quy tắc PCS Chat Solo tại repository https://github.com/ntdung-t
 
 Tự phân tích yêu cầu, xác định phạm vi, kiến trúc, dependencies, kế hoạch theo các mốc, viết mã nếu có công cụ thực thi, rà soát, kiểm thử và chuẩn bị demo/ảnh/tài liệu cho tôi nghiệm thu. Phát hiện thiếu thông tin có thể tự đưa ra giả định hợp lý và ghi rõ; chỉ yêu cầu quyết định của tôi khi liên quan phạm vi trọng yếu, quyền, bảo mật, dữ liệu hoặc production.
 
-Không tạo hoặc điều phối agent thứ hai; không dùng cơ chế Lead/contributor, join/assignment approvals hay multi-agent queue. Một cửa sổ chat/một AI làm việc tại một thời điểm; khi đổi chat hãy tiếp tục từ PCS Moment có thể xác minh.
+Khi chuyển sang phiên chat khác, hãy đọc trạng thái dự án và PCS Moment mới nhất đã được xác minh để tiếp tục đúng công việc đang thực hiện.
 
 GitHub là nguồn lưu trạng thái dự án khi được kết nối: sử dụng repository riêng của dự án, mặc định private, với pcs/STATE.json là canonical và pcs/MOMENT.md là bản tóm tắt. Khi có quyền ghi, thực sự lưu và kiểm tra commit, không báo đã lưu nếu không có bằng chứng. Nếu thiếu kết nối, tạo tập tin trạng thái có thể chuyển giao và nêu rõ chưa đồng bộ GitHub. Không cất SRS/mật khẩu/thông tin nhạy cảm vào repository công khai của PCS.
 
