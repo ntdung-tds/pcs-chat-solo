@@ -10,6 +10,13 @@
 
 A single, short Skill is available in `.agents/skills/pcs-chat-solo/SKILL.md` for AI hosts that discover repository Skills. It is discovered only when the host uses this toolkit repository as a Skill-capable workspace or the Skill is installed in a supported user/project Skill location; a different project repository does not inherit this Skill. This does **not** install itself into ChatGPT or any other host. Prompt-first users can keep using this file without a Skill; do not create extra Skills for SRS changes, checklists or handoff.
 
+## Outcome-first agent autonomy (applies to ordinary tasks)
+
+- SRS/SOW defines required outcomes, business invariants, security, interoperability and acceptance. Proposed API routes, DDL, schemas, test templates and task splits are **guidance**, not frozen implementation mandates unless explicitly approved as binding.
+- Within assigned scope and real permissions, the agent may choose techniques, design internal contracts, split/combine tasks, refactor and write/adjust risk-proportionate tests **without asking the Owner to approve each routine detail**. Keep required behavior and existing approved/public contracts compatible.
+- An OPEN decision blocks **only the task or irreversible action that depends on it**, not unrelated safe work. Sensitive actions (production, IAM/credentials, tenant/privacy boundaries, destructive migration, payment/spend, breaking an approved contract) retain verified authorization and test/evidence gates.
+- Record true requirement deviations in the project's existing `pcs/SRS_CHANGES.md`; do not silently edit the SRS baseline, invent PASS results or add new approval paperwork.
+
 ## Start / resume
 1. Read the user's request and available project sources. If the project exists, read its current `pcs/MOMENT.md` first, reconcile its revision with canonical `pcs/STATE.json`/HEAD using a bounded query where tools allow, then inspect only the relevant code, requirements and recent changes. If no PCS state exists, open `templates/STATE.example.json` **once** to initialize it.
 2. Confirm actual tools, project repository and permissions. Never invent access, source contents, tests or deployments.
